@@ -12,8 +12,8 @@
 #Focus of the paper: With limited training instances and data
 #Collaborate with Shayok talk during office hours
 
-#todo put classname at the end (get class name from splitting it and insert at the end
-#todo put filename without csv as index
+# put classname at the end (get class name from splitting it and insert at the end
+# put filename without csv as index
 #todo training data and test data split
 
 import os
