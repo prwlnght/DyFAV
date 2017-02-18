@@ -63,11 +63,12 @@ def normalize(df):
     return result
 
 
+
 #todo write the classfile in the first column
 def preprocess():
     os.chdir(data_directory)
     for file in os.listdir("."):
-        os.chdir(file)
+        os.chdir(data_directory+ "\\" + file)
         features_dataframe = pandas.DataFrame(columns=feature_column_names)
         #loop through all files and populate the features_datafram
         for csvfile in find_csv_filenames("."):

@@ -1,0 +1,49 @@
+DEBUG:DyFAVlogs:Feature Cutoff at 85
+DEBUG:DyFAVlogs:The overall accuracy for cross validation Anurag_04052016_features.csv was  0.6060606060606061
+DEBUG:DyFAVlogs:2017-02-15 21:52:09.310550
+DEBUG:DyFAVlogs:-------------------------------------------------------------
+DEBUG:DyFAVlogs:a was misidentified 1 times as dict_keys(['_totals', 't'])
+DEBUG:DyFAVlogs:f was misidentified 5 times as dict_keys(['c', 'b', '_totals', 'e'])
+DEBUG:DyFAVlogs:x was misidentified 1 times as dict_keys(['_totals', 'r'])
+DEBUG:DyFAVlogs:j was misidentified 1 times as dict_keys(['_totals', 'l'])
+DEBUG:DyFAVlogs:m was misidentified 3 times as dict_keys(['_totals', 'w', 'r', 'n'])
+DEBUG:DyFAVlogs:q was misidentified 1 times as dict_keys(['_totals', 'e'])
+DEBUG:DyFAVlogs:w was misidentified 5 times as dict_keys(['m', '_totals', 'n', 'o'])
+DEBUG:DyFAVlogs:c was misidentified 4 times as dict_keys(['r', '_totals', 'e'])
+DEBUG:DyFAVlogs:p was misidentified 3 times as dict_keys(['z', '_totals', 'h'])
+DEBUG:DyFAVlogs:d was misidentified 5 times as dict_keys(['_totals', 'l', 'o'])
+DEBUG:DyFAVlogs:i was misidentified 2 times as dict_keys(['j', 'x', '_totals'])
+DEBUG:DyFAVlogs:k was misidentified 4 times as dict_keys(['q', '_totals', 'h', 'g'])
+DEBUG:DyFAVlogs:y was misidentified 5 times as dict_keys(['q', '_totals', 'b', 'v', 'u', 'i'])
+DEBUG:DyFAVlogs:t was misidentified 3 times as dict_keys(['a', 'z', '_totals', 's'])
+DEBUG:DyFAVlogs:b was misidentified 3 times as dict_keys(['r', '_totals', 'e', 'o'])
+DEBUG:DyFAVlogs:v was misidentified 5 times as dict_keys(['_totals', 'w', 'r', 'n', 'o'])
+DEBUG:DyFAVlogs:u was misidentified 1 times as dict_keys(['_totals', 'n'])
+DEBUG:DyFAVlogs:{'a': {'_totals': 1, 't': [6.2035880244551906]}, 'f': {'c': [4.475697716754051, 3.981449801808655, 4.4081227666548353], 'b': [3.8240751150495735], '_totals': 5, 'e': [5.1269547981280503]}, 'x': {'_totals': 1, 'r': [3.8193876406499481]}, 'j': {'_totals': 1, 'l': [3.9926002479881793]}, 'm': {'_totals': 3, 'w': [3.9448240502517837], 'r': [5.9221844140706024], 'n': [5.7750042792572716]}, 'q': {'_totals': 1, 'e': [3.8096338008666413]}, 'w': {'m': [4.1741265137821513, 4.4675678312163107], '_totals': 5, 'n': [4.968361993752568], 'o': [4.9141059205760929, 4.7289828066913389]}, 'c': {'r': [6.4384124777959464, 5.0618711204740938], '_totals': 4, 'e': [4.7196937148167457, 5.223219282064413]}, 'p': {'z': [5.040674229638479], '_totals': 3, 'h': [5.4272050900801778, 4.8159401502920751]}, 'd': {'_totals': 5, 'l': [6.6541721565537797], 'o': [4.432640608920865, 4.6923064061932616, 6.6422977148392848, 5.5796936692187211]}, 'i': {'j': [6.1292135149052243], 'x': [3.8934429323258257], '_totals': 2}, 'k': {'q': [4.9807063849637201, 5.2744263170125842], '_totals': 4, 'h': [6.706451457663503], 'g': [6.8989455616747746]}, 'y': {'q': [4.7804481992681591], '_totals': 5, 'b': [4.0873087964049288], 'v': [3.5325735171642685], 'u': [3.45647164536719], 'i': [4.8013785862020608]}, 't': {'a': [9.8259564268906239], 'z': [4.1304501704536412], '_totals': 3, 's': [3.733103117302198]}, 'b': {'r': [4.3032491188982922], '_totals': 3, 'e': [4.1773577829172091], 'o': [4.4791284955685482]}, 'v': {'_totals': 5, 'w': [3.603070197920097], 'r': [5.80226715736993], 'n': [4.0455170180434781, 4.8194546146035684], 'o': [5.0614491782665372]}, 'u': {'_totals': 1, 'n': [4.7933736501569904]}}
+DEBUG:DyFAVlogs:-------------------------------------------------------------
+DEBUG:DyFAVlogs:The overall accuracy for cross validation Javad_04052016_features.csv was  0.7404580152671756
+DEBUG:DyFAVlogs:2017-02-15 21:52:46.892607
+DEBUG:DyFAVlogs:-------------------------------------------------------------
+DEBUG:DyFAVlogs:a was misidentified 4 times as dict_keys(['d', '_totals', 'p', 't'])
+DEBUG:DyFAVlogs:f was misidentified 9 times as dict_keys(['c', 'b', '_totals', 'd', 'e'])
+DEBUG:DyFAVlogs:l was misidentified 1 times as dict_keys(['_totals', 'o'])
+DEBUG:DyFAVlogs:x was misidentified 2 times as dict_keys(['_totals', 'y', 'r'])
+DEBUG:DyFAVlogs:j was misidentified 1 times as dict_keys(['_totals', 'l'])
+DEBUG:DyFAVlogs:m was misidentified 8 times as dict_keys(['n', 'r', 'w', 'o', '_totals', 'g', 'l'])
+DEBUG:DyFAVlogs:q was misidentified 1 times as dict_keys(['_totals', 'e'])
+DEBUG:DyFAVlogs:w was misidentified 6 times as dict_keys(['m', 'x', '_totals', 'n', 'o'])
+DEBUG:DyFAVlogs:c was misidentified 5 times as dict_keys(['q', 'r', '_totals', 'e'])
+DEBUG:DyFAVlogs:p was misidentified 3 times as dict_keys(['z', '_totals', 'h'])
+DEBUG:DyFAVlogs:d was misidentified 5 times as dict_keys(['_totals', 'l', 'o'])
+DEBUG:DyFAVlogs:i was misidentified 6 times as dict_keys(['j', 'x', '_totals', 's', 'h'])
+DEBUG:DyFAVlogs:k was misidentified 4 times as dict_keys(['q', '_totals', 'h', 'g'])
+DEBUG:DyFAVlogs:y was misidentified 5 times as dict_keys(['q', '_totals', 'b', 'v', 'u', 'i'])
+DEBUG:DyFAVlogs:t was misidentified 6 times as dict_keys(['a', 'z', 's', 'b', '_totals', 'g'])
+DEBUG:DyFAVlogs:e was misidentified 1 times as dict_keys(['f', '_totals'])
+DEBUG:DyFAVlogs:b was misidentified 5 times as dict_keys(['r', 'w', '_totals', 'e', 'o'])
+DEBUG:DyFAVlogs:v was misidentified 9 times as dict_keys(['y', 'l', 'n', 'r', 'w', '_totals', 'o'])
+DEBUG:DyFAVlogs:u was misidentified 1 times as dict_keys(['_totals', 'n'])
+DEBUG:DyFAVlogs:n was misidentified 3 times as dict_keys(['_totals', 'o'])
+DEBUG:DyFAVlogs:h was misidentified 1 times as dict_keys(['_totals', 'd'])
+DEBUG:DyFAVlogs:{'a': {'d': [4.1041277531133655, 3.9686690702668073], '_totals': 4, 'p': [6.3906064266348954], 't': [6.2035880244551906]}, 'f': {'c': [4.475697716754051, 3.981449801808655, 4.4081227666548353], 'b': [3.8240751150495735], '_totals': 9, 'd': [6.0337919970469098, 4.5886485427457968, 5.2887358611176953], 'e': [5.1269547981280503, 5.6825991403404075]}, 'l': {'_totals': 1, 'o': [3.9417074079542451]}, 'x': {'_totals': 2, 'y': [6.9099684388258664], 'r': [3.8193876406499481]}, 'j': {'_totals': 1, 'l': [3.9926002479881793]}, 'm': {'n': [5.7750042792572716, 4.9562206432744329, 6.7144825566886759], 'r': [5.9221844140706024], 'w': [3.9448240502517837], 'o': [6.1287607240831781], '_totals': 8, 'g': [6.4699815796069693], 'l': [3.9987547080264814]}, 'q': {'_totals': 1, 'e': [3.8096338008666413]}, 'w': {'m': [4.1741265137821513, 4.4675678312163107], 'x': [5.4975716965911765], '_totals': 6, 'n': [4.968361993752568], 'o': [4.9141059205760929, 4.7289828066913389]}, 'c': {'q': [7.1048174064141936], 'r': [6.4384124777959464, 5.0618711204740938], '_totals': 5, 'e': [4.7196937148167457, 5.223219282064413]}, 'p': {'z': [5.040674229638479], '_totals': 3, 'h': [5.4272050900801778, 4.8159401502920751]}, 'd': {'_totals': 5, 'l': [6.6541721565537797], 'o': [4.432640608920865, 4.6923064061932616, 6.6422977148392848, 5.5796936692187211]}, 'i': {'j': [6.1292135149052243], 'x': [3.8934429323258257], '_totals': 6, 's': [4.7557760242502614, 6.1220486374554648], 'h': [5.5537272838640011, 4.1431720471741507]}, 'k': {'q': [4.9807063849637201, 5.2744263170125842], '_totals': 4, 'h': [6.706451457663503], 'g': [6.8989455616747746]}, 'y': {'q': [4.7804481992681591], '_totals': 5, 'b': [4.0873087964049288], 'v': [3.5325735171642685], 'u': [3.45647164536719], 'i': [4.8013785862020608]}, 't': {'a': [9.8259564268906239], 'z': [4.1304501704536412], 's': [3.733103117302198, 7.4369067147655272], 'b': [5.2089590948082094], '_totals': 6, 'g': [7.9422037601743165]}, 'e': {'f': [5.2422991381782715], '_totals': 1}, 'b': {'r': [4.3032491188982922, 6.3188548102506905], 'w': [3.8879182882421714], '_totals': 5, 'e': [4.1773577829172091], 'o': [4.4791284955685482]}, 'v': {'y': [7.5677798468930524, 6.2667771592924257], 'l': [6.022925119086401], 'n': [4.0455170180434781, 4.8194546146035684], 'r': [5.80226715736993], 'w': [3.603070197920097, 5.7030568593016717], '_totals': 9, 'o': [5.0614491782665372]}, 'u': {'_totals': 1, 'n': [4.7933736501569904]}, 'n': {'_totals': 3, 'o': [9.1048546819823937, 7.5520458136320627, 7.7465447243252159]}, 'h': {'_totals': 1, 'd': [1.5479282472469569]}}
+DEBUG:DyFAVlogs:-------------------------------------------------------------
