@@ -1,0 +1,2 @@
+Fuzzy threshold <- 0
+0-1 weight normalization <- yes

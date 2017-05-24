@@ -25,6 +25,7 @@ import string
 import numpy
 import logging
 import datetime
+from collections import Counter
 
 import itertools
 
@@ -35,16 +36,21 @@ features_to_extract = ["mean", "min", "max", "stdev", "energy"]
 
 feature_column_names = ["Class"]
 to_cross_validate = True;
-to_get_training_accurary = False;
+to_get_training_accurary = True;
 # model_directory = ""
 build_model = True
+fuzzy_thresholds = [0.00, 0.01, 0.02, 0.05, 0.07, 0.1, 0.2, 0.5]
+is_per_class_weight_normalizations = [True, False]
 
 # taking quarter padding around the digits
 padding_heuristics = 4
 
 #todo remove heuristics for number of features
-feature_cutoffs = [85, 51, 11]
+feature_cutoffs = [50]
 feature_cutoff = 85
+verbose = False
+m_is_per_class_weight_normalization = False
+fuzzy_threshold = 0
 
 def create_feature_column_names():
     for feature in features_to_extract:
@@ -77,23 +83,26 @@ def build_model(model_data, this_model_directory):
             # todo find the upper and lower ranges
             this_lower_range = this_sorted_names[this_sorted_names == m_alphabet].index[0]
             this_upper_range = this_sorted_names[this_sorted_names == m_alphabet].index[-1]
-            # todo find better heuristics to add padding
-            if (this_lower_range != 0):
-                threshold_lower = this_sorted_values[this_lower_range] - (this_sorted_values[this_lower_range] -
-                                                                          this_sorted_values[
-                                                                              this_lower_range - 1]) / padding_heuristics
-            else:
-                threshold_lower = this_sorted_values[this_lower_range] - (this_sorted_values[this_lower_range + 1] -
-                                                                          this_sorted_values[
-                                                                              this_lower_range]) / padding_heuristics
-            if (this_upper_range < (total_range - 1)):
-                threshold_upper = this_sorted_values[this_upper_range] + (this_sorted_values[this_upper_range + 1] -
-                                                                          this_sorted_values[
-                                                                              this_upper_range]) / padding_heuristics
-            else:
-                threshold_upper = this_sorted_values[this_upper_range] - (this_sorted_values[this_upper_range] -
-                                                                          this_sorted_values[
-                                                                              this_upper_range - 1]) / padding_heuristics
+
+            #padding heuristics should be threshold upper - threshold lower / number of examples lower than lower and higher than higher
+            padding_heuristics = abs((this_sorted_values[this_upper_range] - this_sorted_values[this_lower_range]) / this_examples)
+            # todo find better heuristics to add padding > this assumes low variation and intensifies the observed variation
+            threshold_lower = this_sorted_values[this_lower_range] - padding_heuristics
+            threshold_upper = this_sorted_values[this_upper_range] + padding_heuristics
+            # if (this_lower_range != 0):
+            #     threshold_lower = this_sorted_values[this_lower_range] - padding_heuristics
+            # else:
+            #     threshold_lower = this_sorted_values[this_lower_range] - (this_sorted_values[this_lower_range + 1] -
+            #                                                               this_sorted_values[
+            #                                                                   this_lower_range]) / padding_heuristics
+            # if (this_upper_range < (total_range - 1)):
+            #     threshold_upper = this_sorted_values[this_upper_range] + (this_sorted_values[this_upper_range + 1] -
+            #                                                               this_sorted_values[
+            #                                                                   this_upper_range]) / padding_heuristics
+            # else:
+            #     threshold_upper = this_sorted_values[this_upper_range] - (this_sorted_values[this_upper_range] -
+            #                                                               this_sorted_values[
+            #                                                                   this_upper_range - 1]) / padding_heuristics
             if (total_range <= this_examples):
                 print('not enough training examples')
                 return
@@ -117,6 +126,7 @@ def cross_validate():
     for m in feature_cutoffs:
         feature_cutoff = m
         dyfav_logger.debug("Feature Cutoff at {}".format(m))
+        overall_test_accuracy = 0
         for csvfile in find_csv_filenames(data_directory):
             average_crossvalidation_accuracy = 0
             sum = 0
@@ -132,12 +142,21 @@ def cross_validate():
                     os.makedirs(this_model_directory)
                     if build_model:
                         build_model(cross_validate_frame, this_model_directory)
-                print("Model has been built and stored to %s", this_model_directory)
-                class_label, recognized_label, score_list = recognize(file_frame.iloc[index], this_model_directory)
-                print("The class label {} was recognized as {} with a score of {}".format(class_label, recognized_label,
+                if verbose:
+                    print("Model has been built and stored to %s", this_model_directory)
+                class_label, recognized_label, score_list, margin, feature_contributions_list = recognize(file_frame.iloc[index], this_model_directory)
+                if verbose:
+                    print("The class label {} was recognized as {} with a score of {}".format(class_label, recognized_label,
                                                                                           score_list[recognized_label]))
                 sum += int(class_label == recognized_label)
                 if (class_label != recognized_label):
+                    dyfav_logger.debug(
+                        "The class label {} was incorrectly recognized as {} with a score of {}, a margin {}, highest scores {} and top  feature_contributions was {}".format(
+                            class_label,
+                            recognized_label,
+                            score_list[
+                                recognized_label], margin, Counter(score_list).most_common(5), Counter(feature_contributions_list).most_common(5)))
+
                     if class_label in incorrects:
                         details = incorrects[class_label]
                         details["_totals"] += 1
@@ -158,15 +177,20 @@ def cross_validate():
 
 
             accuracy = sum / (file_frame.__len__())
-            print("The overall accuracy for cross validation {} was  {}".format(csvfile, accuracy))
-            dyfav_logger.debug("The overall accuracy for cross validation {} was  {}".format(csvfile, accuracy))
-            dyfav_logger.debug(datetime.datetime.now())
-            dyfav_logger.debug("-------------------------------------------------------------")
-            for k in incorrects:
-                dyfav_logger.debug(
-                    "{} was misidentified {} times as {}".format(k, incorrects[k]["_totals"], incorrects[k].keys()))
-            dyfav_logger.debug(incorrects)
-            dyfav_logger.debug("-------------------------------------------------------------")
+            overall_test_accuracy = overall_test_accuracy + accuracy
+            print("The cross validation accuracy for {} was  {}".format(csvfile, accuracy))
+            dyfav_logger.debug("The cross validation accuracy for {} was  {}".format(csvfile, accuracy))
+            # dyfav_logger.debug("The overall accuracy for cross validation {} was  {}".format(csvfile, accuracy))
+            # dyfav_logger.debug(datetime.datetime.now())
+            # dyfav_logger.debug("-------------------------------------------------------------")
+            # for k in incorrects:
+            #     dyfav_logger.debug(
+            #         "{} was misidentified {} times as {}".format(k, incorrects[k]["_totals"], incorrects[k].keys()))
+            # dyfav_logger.debug(incorrects)
+            # dyfav_logger.debug("-------------------------------------------------------------")
+        print("The overall cross validation accuracy across all users was  {}".format(overall_test_accuracy/find_csv_filenames(".").__len__()))
+        dyfav_logger.debug("The overall cross validation accuracy across all users was  {}".format(
+            overall_test_accuracy / find_csv_filenames(".").__len__()))
     return
 
 
@@ -178,10 +202,11 @@ def recognize(test_features, this_model_directory):
     class_label = test_features[0]
     # os.chdir(model_directory)
     score_list = {}
+    feature_contributions_list = {}
     for model_file in find_csv_filenames(this_model_directory):
         model_frame = pandas.read_csv((this_model_directory + "\\" + model_file))
         # todo alphabet_A_working . copy here
-
+        feature_contributions = 0
         # sort the model by weight and reset index
         this_alphabet_total = 0
         this_sorted_model = model_frame.sort_values(["Weight"], ascending=False)
@@ -190,22 +215,32 @@ def recognize(test_features, this_model_directory):
         this_sorted_model_cropped = this_sorted_model[this_sorted_model.index.isin(set(range(feature_cutoff)))]
         this_sorted_model_cropped.reset_index(drop=True, inplace=True)
 
-        for index in range(1, this_sorted_model_cropped.__len__()):
+        for index in range(0, this_sorted_model_cropped.__len__()):
             this_feature_line_in_model = this_sorted_model_cropped.iloc[index]
-            if this_feature_line_in_model['Threshold_Lower'] <= test_features[this_feature_line_in_model['Features']] <= \
-                    this_feature_line_in_model['Threshold_Upper']:
-                this_alphabet_total += this_feature_line_in_model['Weight']
+            if (this_feature_line_in_model['Threshold_Lower'] - fuzzy_threshold* abs(this_feature_line_in_model['Threshold_Lower'])) <= test_features[this_feature_line_in_model['Features']] <= \
+                    this_feature_line_in_model['Threshold_Upper'] + fuzzy_threshold*abs(this_feature_line_in_model['Threshold_Lower']):
+                if(is_per_class_weight_normalization):
+                    this_alphabet_total += this_feature_line_in_model['Weight'] / sum(this_sorted_model_cropped['Weight'])
+                else:
+                    this_alphabet_total += this_feature_line_in_model['Weight']
+                feature_contributions += 1
         # todo implement this as dictionary
         score_list[model_file.split(".", 1)[0]] = this_alphabet_total
+        feature_contributions_list[model_file.split(".", 1)[0]] = feature_contributions
         # make this into a dictionary with class_names
     # class label = max (score list values)
     # todo for each model
     # todo parallelize
-    recognized_label = max(score_list, key=lambda i: score_list[i])
-    return [class_label, recognized_label, score_list]
+    d = Counter(score_list)
+    recognized_label = d.most_common(2)[0][0]
+    next_in_line = d.most_common(2)[1][0]
+    margin = d.most_common(2)[0][1] - d.most_common(2)[1][1]
+
+    return [class_label, recognized_label, score_list, margin, feature_contributions_list]
 
 
 def get_training_accuracy():
+    overall_accuracy_training = 0
     for csvfile in find_csv_filenames("."):
         # build a model
         file_frame = pandas.read_csv(csvfile)
@@ -214,16 +249,34 @@ def get_training_accuracy():
             os.makedirs(this_model_directory)
             if build_model:
                 build_model(file_frame, this_model_directory)
-        print("Model has been built and stored to %s", this_model_directory)
+        if verbose:
+            print("Model has been built and stored to %s", this_model_directory)
         average_training_accurary = 0
         sum = 0
         for index in range(0, file_frame.__len__()):
-            class_label, recognized_label, score_list = recognize(file_frame.iloc[index], this_model_directory)
-            print("The class label {} was recognized as {} with a score of {}".format(class_label, recognized_label,
+            class_label, recognized_label, score_list, margin, feature_contributions_list = recognize(file_frame.iloc[index], this_model_directory)
+            if verbose:
+                print("The class label {} was recognized as {} with a score of {}".format(class_label, recognized_label,
                                                                                       score_list[recognized_label]))
             sum += int(class_label == recognized_label)
+            if class_label != recognized_label:
+                print("The class label {} was incorrectly recognized as {} with a score of {}, a margin {} and  the feature_contributions was {}".format(class_label,
+                                                                                              recognized_label,
+                                                                                              score_list[
+                                                                                                  recognized_label], margin, feature_contributions_list))
+                dyfav_logger.debug(
+                    "The class label {} was incorrectly recognized as {} with a score of {}, a margin {} and  the feature_contributions was {}".format(
+                        class_label,
+                        recognized_label,
+                        score_list[
+                            recognized_label], margin, feature_contributions_list))
+                #recognize(file_frame.iloc[index], this_model_directory)
         accuracy = sum / (file_frame.__len__())
-        print("The overall accuracy for training {} was  {}".format(csvfile, accuracy))
+        overall_accuracy_training = overall_accuracy_training + accuracy
+        print("The accuracy for training {} was  {}".format(csvfile, accuracy))
+        dyfav_logger.debug("The accuracy for training {} was  {}".format(csvfile, accuracy))
+    print("The overall training accuracy {}".format(overall_accuracy_training/find_csv_filenames(".").__len__()))
+    dyfav_logger.debug("The overall training accuracy {}".format(overall_accuracy_training / find_csv_filenames(".").__len__()))
         # test this modelscore
 
 
@@ -233,8 +286,9 @@ def get_training_accuracy():
 # todo define a mechanism to obtain path or dataframe as argument (how to make a constructor in python)
 
 # setup logger
-log_filename = "dyfavLogsfile_2.log"
-logging_directory = "C:\\Users\\ppaudyal\\workspace\\DyFAV\\logs"  # todo use this
+
+logging_directory = "C:\\Users\\ppaudyal\\Google Drive\\School\\"  # todo use this
+log_filename = logging_directory + "dyfavLogsfile_0524-buildmodel.log"
 logging.basicConfig(filename=log_filename, level=logging.DEBUG)
 
 dyfav_logger = logging.getLogger("DyFAVlogs")
@@ -242,14 +296,23 @@ dyfav_logger.setLevel(logging.DEBUG)
 # handler = logging.handlers.RotatingFileHandler(log_filename, maxBytes=200, backupCount=10)
 # dyfav_logger.addHandler(handler)
 
-data_directory = "C:\\Users\\ppaudyal\\workspace\\DyFAV\Data\\features"
+data_directory = "C:\\Users\\ppaudyal\\workspace\\DyFAV\\Data\\features"
 create_feature_column_names()
 os.chdir(data_directory)
 
-if to_get_training_accurary:
-    print(get_training_accuracy())
+for m_is_per_class_weight_normalization in is_per_class_weight_normalizations:
+    for m_fuzzy_threshold in fuzzy_thresholds:
+        fuzzy_threshold = m_fuzzy_threshold
+        is_per_class_weight_normalization = m_is_per_class_weight_normalization
+        print("Fuzzy threshold is {}".format(fuzzy_threshold))
+        dyfav_logger.debug("Fuzzy threshold is {}".format(fuzzy_threshold))
+        print("0-1 per class weight normalization is {}".format(is_per_class_weight_normalization) )
+        dyfav_logger.debug("0-1 per class weight normalization is {}".format(is_per_class_weight_normalization))
 
-if to_cross_validate:
-    cross_validate();
+        if to_get_training_accurary:
+            print(get_training_accuracy())
+
+        if to_cross_validate:
+            cross_validate();
 
 # END_Control_Flow

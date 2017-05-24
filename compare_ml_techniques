@@ -1,0 +1,64 @@
+#version 1: reads a file > features.csv and runs various DM techniques on it
+### technique 1: svm > ann > random forest > dyfav > naive_bayes > adaboost
+
+
+
+import os
+import pandas
+import csv
+import itertools
+from os import listdir
+import numpy as np
+from sklearn import svm
+from sklearn.ensemble import RandomForestClassifier
+
+feature_file = "sample_features.csv"
+
+
+X = [[0,0], [1,1]]
+y = [0,1]
+clf = svm.SVC()
+clf.fit(X, y)
+
+
+file_frame = pandas.read_csv(feature_file)
+
+for index in range(0, file_frame.__len__()):
+    cross_validate_frame = file_frame[~file_frame.index.isin([index])]
+    cross_validate_frame.reset_index(drop=True, inplace=True)
+    #this_model_directory = data_directory + "\\" + csvfile.split("_", 1)[
+    #   0] + "TEMP\\" + "cross_validate" + str(
+    #    index)
+    if not os.path.exists(this_model_directory):
+        os.makedirs(this_model_directory)
+        if build_model:
+            build_model(cross_validate_frame, this_model_directory)
+    print("Model has been built and stored to %s", this_model_directory)
+    class_label, recognized_label, score_list = recognize(file_frame.iloc[index], this_model_directory)
+    print("The class label {} was recognized as {} with a score of {}".format(class_label, recognized_label,
+                                                                              score_list[recognized_label]))
+    sum += int(class_label == recognized_label)
+    if (class_label != recognized_label):
+        if class_label in incorrects:
+            details = incorrects[class_label]
+            details["_totals"] += 1
+            if recognized_label in details:
+                details[recognized_label].append(score_list[recognized_label])
+
+            else:
+                confusion_list = []
+                confusion_list.append(score_list[recognized_label])
+                details[recognized_label] = confusion_list
+        else:
+            details = {}
+            confusion_list = []
+            confusion_list.append(score_list[recognized_label])
+            details[recognized_label] = confusion_list
+            details["_totals"] = 1
+            incorrects[class_label] = details
+
+#for number of rows in feature file
+#row i is test everything else is train
+#call machine learning algorithm with -i
+#test for i
+#report average accuracy
