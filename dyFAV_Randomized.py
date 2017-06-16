@@ -22,55 +22,51 @@
 import os
 import pandas
 import string
+import random
 import numpy
 import logging
 import datetime
 from collections import Counter
-import copy
+from collections import deque
+import operator
 
 import itertools
 
 sensors = ["EMG0", "EMG1", "EMG2", "EMG3", "EMG4", "EMG5", "EMG6", "EMG7", "Accl0", "Accl1",
            "Accl2", "Gyr0", "Gyr1", "Gyr2", "Orien0", "Orien1", "Orien2"]
 
-
-
-
-
-number_of_classes = 26
-
 features_to_extract = ["mean", "min", "max", "stdev", "energy"]
 
+row_fractions = [1]
+min_features = 85
+max_features = 510
+
 feature_column_names = []
-to_cross_validate = True;
+to_cross_validate = False;
+to_dyfav_build_tress = True
 to_get_training_accurary = False;
 # model_directory = ""
 build_model = True
-#fuzzy_thresholds = [0.0175, 0.019, 0.02, 0.0225, 0.03, 0.05, 0.1]
 fuzzy_thresholds = [0.0175, 0.0225]
-is_per_class_weight_normalizations = [True, False]
+is_per_class_weight_normalizations = [True]
 
 # taking quarter padding around the digits
 padding_heuristics = 4
 
-#todo remove heuristics for number of features
+# todo remove heuristics for number of features
 feature_cutoffs = [510]
 feature_cutoff = 510
 verbose = False
 m_is_per_class_weight_normalization = True
+recognize_modal_value = False
 fuzzy_threshold = 0
+numbers_of_trees = [21]
+
 
 # def create_feature_column_names():
 #     for feature in features_to_extract:
 #         for sensor in sensors:
 #             feature_column_names.append(sensor + "_" + feature)
-
-
-
-
-
-
-
 
 def create_feature_column_names():
     for csvfile in find_csv_filenames(data_directory):
@@ -92,6 +88,7 @@ def build_model(model_data, this_model_directory):
     for m_alphabet in list(string.ascii_lowercase):
         model = pandas.DataFrame(
             columns=["Features", "Range_Lower", "Range_Upper", "Threshold_Lower", "Threshold_Upper", "Weight"])
+        feature_column_names = list(model_data)
         for m_feature in feature_column_names:
             if (m_feature == 'Class'):
                 continue
@@ -107,8 +104,9 @@ def build_model(model_data, this_model_directory):
             this_lower_range = this_sorted_names[this_sorted_names == m_alphabet].index[0]
             this_upper_range = this_sorted_names[this_sorted_names == m_alphabet].index[-1]
 
-            #padding heuristics should be threshold upper - threshold lower / number of examples lower than lower and higher than higher
-            padding_heuristics = abs((this_sorted_values[this_upper_range] - this_sorted_values[this_lower_range]) / this_examples)
+            # padding heuristics should be threshold upper - threshold lower / number of examples lower than lower and higher than higher
+            padding_heuristics = abs(
+                (this_sorted_values[this_upper_range] - this_sorted_values[this_lower_range]) / this_examples)
             # todo find better heuristics to add padding > this assumes low variation and intensifies the observed variation
             threshold_lower = this_sorted_values[this_lower_range] - padding_heuristics
             threshold_upper = this_sorted_values[this_upper_range] + padding_heuristics
@@ -148,7 +146,7 @@ def cross_validate():
     global feature_cutoff
     for m in feature_cutoffs:
         global feature_cutoff
-        feature_cutoff= m
+        feature_cutoff = m
         dyfav_logger.debug("Feature Cutoff at {}".format(m))
         overall_test_accuracy = 0
         for csvfile in find_csv_filenames(data_directory):
@@ -156,12 +154,11 @@ def cross_validate():
             sum = 0
             # build a model for cross-validation
             file_frame = pandas.read_csv(csvfile)
-            number_of_test_cases = file_frame.__len__() - number_of_classes
             for index in range(0, file_frame.__len__()):
                 cross_validate_frame = file_frame[~file_frame.index.isin([index])]
                 cross_validate_frame.reset_index(drop=True, inplace=True)
                 this_model_directory = data_directory + "\\" + csvfile.split("_", 1)[
-                    0] + "_TEMP\\" + "cross_validate" + str(
+                    0] + "TEMP\\" + "cross_validate" + str(
                     index)
                 if not os.path.exists(this_model_directory):
                     os.makedirs(this_model_directory)
@@ -169,10 +166,13 @@ def cross_validate():
                         build_model(cross_validate_frame, this_model_directory)
                 if verbose:
                     print("Model has been built and stored to %s", this_model_directory)
-                class_label, recognized_label, score_list, margin, feature_contributions_list = recognize(file_frame.iloc[index], this_model_directory)
+                class_label, recognized_label, score_list, margin, feature_contributions_list = recognize(
+                    file_frame.iloc[index], this_model_directory)
                 if verbose:
-                    print("The class label {} was recognized as {} with a score of {}".format(class_label, recognized_label,
-                                                                                          score_list[recognized_label]))
+                    print("The class label {} was recognized as {} with a score of {}".format(class_label,
+                                                                                              recognized_label,
+                                                                                              score_list[
+                                                                                                  recognized_label]))
                 sum += int(class_label == recognized_label)
                 if (class_label != recognized_label):
                     dyfav_logger.debug(
@@ -180,7 +180,8 @@ def cross_validate():
                             class_label,
                             recognized_label,
                             score_list[
-                                recognized_label], margin, Counter(score_list).most_common(5), Counter(feature_contributions_list).most_common(5)))
+                                recognized_label], margin, Counter(score_list).most_common(5),
+                            Counter(feature_contributions_list).most_common(5)))
 
                     if class_label in incorrects:
                         details = incorrects[class_label]
@@ -200,8 +201,7 @@ def cross_validate():
                         details["_totals"] = 1
                         incorrects[class_label] = details
 
-
-            accuracy = sum / number_of_test_cases
+            accuracy = sum / (file_frame.__len__())
             overall_test_accuracy = overall_test_accuracy + accuracy
             print("The cross validation accuracy for {} was  {}".format(csvfile, accuracy))
             dyfav_logger.debug("The cross validation accuracy for {} was  {}".format(csvfile, accuracy))
@@ -213,10 +213,96 @@ def cross_validate():
             #         "{} was misidentified {} times as {}".format(k, incorrects[k]["_totals"], incorrects[k].keys()))
             # dyfav_logger.debug(incorrects)
             # dyfav_logger.debug("-------------------------------------------------------------")
-        print("The overall cross validation accuracy across all users was  {}".format(overall_test_accuracy/find_csv_filenames(".").__len__()))
+        print("The overall cross validation accuracy across all users was  {}".format(
+            overall_test_accuracy / find_csv_filenames(".").__len__()))
         dyfav_logger.debug("The overall cross validation accuracy across all users was  {}".format(
             overall_test_accuracy / find_csv_filenames(".").__len__()))
     return
+
+def clear_temp_files():
+    return
+
+def dyFAV_tree():
+    report_list = ['Fuzzy_threshold', 'Number_of_trees']
+    report_list = report_list + list(map(lambda x: x.split("_")[0], find_csv_filenames(data_directory))) + ['Overall_test_accuracy']
+    tree_report_index = 0
+    this_results = []
+    this_results = this_results + [fuzzy_threshold]
+    all_results = [report_list]
+    for number_of_trees in reversed(numbers_of_trees):
+        overall_test_accuracy_tree = 0
+        deque_int = 4
+        this_items = deque(find_csv_filenames(data_directory))
+        #this_items.rotate(4)
+        for csvfile in this_items:
+            file_frame = pandas.read_csv(csvfile)
+            sum = 0
+            for index in range(0, file_frame.__len__()):
+                # for N fold cross validation
+                cross_validate_frame = file_frame[~file_frame.index.isin([index])]
+                cross_validate_frame.reset_index(drop=True, inplace=True)
+                this_results = this_results + [number_of_trees]
+                recognized_labels_dict = {}
+                top_5s = []
+                top_3s = []
+                for tree_number_index in range(0,number_of_trees):  # todo insert for loop for hyperparameter number of trees
+                    this_model_directory = data_directory + "\\" + csvfile.split("_", 1)[
+                        0] + "TEMP\\" + "cross_validate" + str(index) + "_" + str(tree_number_index)
+                    if not os.path.exists(this_model_directory):
+                        os.makedirs(this_model_directory)
+                        if build_model:
+                            #row subsampling
+                            this_frame = cross_validate_frame.groupby('Class').apply(pandas.DataFrame.sample,
+                                                                                     frac=row_fractions[random.randint(0, row_fractions.__len__()-1)]).reset_index(drop=True)
+                            #column subsampling
+                            this_frames_classnames = this_frame['Class']
+                            this_frame.drop('Class',1, inplace = True)
+                            this_frame = this_frame.sample(random.randint(min_features, max_features), frac=None, replace=False, axis=1)
+                            this_frame.insert(0, 'Class', this_frames_classnames)
+                            build_model(this_frame, this_model_directory)
+                    if verbose:
+                        print("Model has been built and stored to %s", this_model_directory)
+                    class_label, this_recognized_label, score_list, margin, feature_contributions_list = recognize(
+                        file_frame.iloc[index], this_model_directory)
+                    if this_recognized_label in recognized_labels_dict:
+                        recognized_labels_dict[this_recognized_label] += Counter(score_list).most_common(1)[0][1]
+                    else:
+                        recognized_labels_dict[this_recognized_label] = Counter(score_list).most_common(1)[0][1]
+                    top_5s = top_5s + Counter(score_list).most_common(5) + ['--']
+                    top_3s = top_3s + Counter(score_list).most_common(3)
+                    if verbose:
+                        print("The class label {} was recognized as {} with a score of {}".format(class_label, recognized_label,
+                                                                                                      score_list[recognized_label]))
+                if recognize_modal_value:
+                    recognized_label = Counter(elem[0] for elem in top_3s).most_common(1)[0][0]
+                else:
+                    recognized_label = max(recognized_labels_dict, key=lambda key: recognized_labels_dict[key])
+                if (class_label != recognized_label):
+                    dyfav_logger.debug("The class label {} was recognized as {} with the dictionary of {} and top 5s {}".format(class_label, recognized_label, recognized_labels_dict, top_5s))
+                sum += int(class_label == recognized_label)
+            accuracy = sum / (file_frame.__len__())
+            this_results + [accuracy]
+            overall_test_accuracy_tree = overall_test_accuracy_tree + accuracy
+            print("The cross validation accuracy for {} was  {}".format(csvfile, accuracy))
+            dyfav_logger.debug("The cross validation accuracy for {} was  {}".format(csvfile, accuracy))
+            # dyfav_logger.debug("The overall accuracy for cross validation {} was  {}".format(csvfile, accuracy))
+            # dyfav_logger.debug(datetime.datetime.now())
+            # dyfav_logger.debug("-------------------------------------------------------------")
+            # for k in incorrects:
+            #     dyfav_logger.debug(
+            #         "{} was misidentified {} times as {}".format(k, incorrects[k]["_totals"], incorrects[k].keys()))
+            # dyfav_logger.debug(incorrects)
+            # dyfav_logger.debug("-------------------------------------------------------------")
+            clear_temp_files()
+        print("The overall cross validation accuracy for trees across all users was  {}".format(
+            overall_test_accuracy_tree / find_csv_filenames(".").__len__()))
+        dyfav_logger.debug("The overall cross validation for trees accuracy across all users was  {}".format(
+            overall_test_accuracy_tree / find_csv_filenames(".").__len__()))
+        this_results + [overall_test_accuracy_tree]
+        all_results.append(this_results)
+        tree_report_index = tree_report_index + 1
+    tree_report = pandas.DataFrame(all_results, columns=report_list)
+    tree_report.to_csv("C:\\Users\\ppaudyal\\Google Drive\\School\\tree_report_" + str(fuzzy_threshold*1000) + "_.csv")
 
 
 def recognize(test_features, this_model_directory):
@@ -242,10 +328,14 @@ def recognize(test_features, this_model_directory):
 
         for index in range(0, this_sorted_model_cropped.__len__()):
             this_feature_line_in_model = this_sorted_model_cropped.iloc[index]
-            if (this_feature_line_in_model['Threshold_Lower'] - fuzzy_threshold* abs(this_feature_line_in_model['Threshold_Lower'])) <= test_features[this_feature_line_in_model['Features']] <= \
-                    this_feature_line_in_model['Threshold_Upper'] + fuzzy_threshold*abs(this_feature_line_in_model['Threshold_Lower']):
-                if(is_per_class_weight_normalization):
-                    this_alphabet_total += this_feature_line_in_model['Weight'] / sum(this_sorted_model_cropped['Weight'])
+            if (this_feature_line_in_model['Threshold_Lower'] - fuzzy_threshold * abs(
+                    this_feature_line_in_model['Threshold_Lower'])) <= test_features[
+                this_feature_line_in_model['Features']] <= \
+                            this_feature_line_in_model['Threshold_Upper'] + fuzzy_threshold * abs(
+                        this_feature_line_in_model['Threshold_Lower']):
+                if (is_per_class_weight_normalization):
+                    this_alphabet_total += this_feature_line_in_model['Weight'] / sum(
+                        this_sorted_model_cropped['Weight'])
                 else:
                     this_alphabet_total += this_feature_line_in_model['Weight']
                 feature_contributions += 1
@@ -279,30 +369,34 @@ def get_training_accuracy():
         average_training_accurary = 0
         sum = 0
         for index in range(0, file_frame.__len__()):
-            class_label, recognized_label, score_list, margin, feature_contributions_list = recognize(file_frame.iloc[index], this_model_directory)
+            class_label, recognized_label, score_list, margin, feature_contributions_list = recognize(
+                file_frame.iloc[index], this_model_directory)
             if verbose:
                 print("The class label {} was recognized as {} with a score of {}".format(class_label, recognized_label,
-                                                                                      score_list[recognized_label]))
+                                                                                          score_list[recognized_label]))
             sum += int(class_label == recognized_label)
             if class_label != recognized_label:
-                print("The class label {} was incorrectly recognized as {} with a score of {}, a margin {} and  the feature_contributions was {}".format(class_label,
-                                                                                              recognized_label,
-                                                                                              score_list[
-                                                                                                  recognized_label], margin, feature_contributions_list))
+                print(
+                    "The class label {} was incorrectly recognized as {} with a score of {}, a margin {} and  the feature_contributions was {}".format(
+                        class_label,
+                        recognized_label,
+                        score_list[
+                            recognized_label], margin, feature_contributions_list))
                 dyfav_logger.debug(
                     "The class label {} was incorrectly recognized as {} with a score of {}, a margin {} and  the feature_contributions was {}".format(
                         class_label,
                         recognized_label,
                         score_list[
                             recognized_label], margin, feature_contributions_list))
-                #recognize(file_frame.iloc[index], this_model_directory)
+                # recognize(file_frame.iloc[index], this_model_directory)
         accuracy = sum / (file_frame.__len__())
         overall_accuracy_training = overall_accuracy_training + accuracy
         print("The accuracy for training {} was  {}".format(csvfile, accuracy))
         dyfav_logger.debug("The accuracy for training {} was  {}".format(csvfile, accuracy))
-    print("The overall training accuracy {}".format(overall_accuracy_training/find_csv_filenames(".").__len__()))
-    dyfav_logger.debug("The overall training accuracy {}".format(overall_accuracy_training / find_csv_filenames(".").__len__()))
-        # test this modelscore
+    print("The overall training accuracy {}".format(overall_accuracy_training / find_csv_filenames(".").__len__()))
+    dyfav_logger.debug(
+        "The overall training accuracy {}".format(overall_accuracy_training / find_csv_filenames(".").__len__()))
+    # test this modelscore
 
 
 # BEGIN_Control_Flow
@@ -313,7 +407,7 @@ def get_training_accuracy():
 # setup logger
 
 logging_directory = "C:\\Users\\ppaudyal\\Google Drive\\School\\"  # todo use this
-log_filename = logging_directory + "dyfav_0615.log"
+log_filename = logging_directory + "dyfavLogsfile_0601_max.log"
 logging.basicConfig(filename=log_filename, level=logging.DEBUG)
 
 dyfav_logger = logging.getLogger("DyFAVlogs")
@@ -321,7 +415,7 @@ dyfav_logger.setLevel(logging.DEBUG)
 # handler = logging.handlers.RotatingFileHandler(log_filename, maxBytes=200, backupCount=10)
 # dyfav_logger.addHandler(handler)
 
-data_directory = "C:\\Users\\ppaudyal\\workspace\\DyFAV\\Data\\features_accl_emg_gyr"
+data_directory = "C:\\Users\\ppaudyal\\workspace\\DyFAV\\Data\\features"
 create_feature_column_names()
 os.chdir(data_directory)
 
@@ -331,7 +425,7 @@ for m_is_per_class_weight_normalization in is_per_class_weight_normalizations:
         is_per_class_weight_normalization = m_is_per_class_weight_normalization
         print("Fuzzy threshold is {}".format(fuzzy_threshold))
         dyfav_logger.debug("Fuzzy threshold is {}".format(fuzzy_threshold))
-        print("0-1 per class weight normalization is {}".format(is_per_class_weight_normalization) )
+        print("0-1 per class weight normalization is {}".format(is_per_class_weight_normalization))
         dyfav_logger.debug("0-1 per class weight normalization is {}".format(is_per_class_weight_normalization))
 
         if to_get_training_accurary:
@@ -340,4 +434,15 @@ for m_is_per_class_weight_normalization in is_per_class_weight_normalizations:
         if to_cross_validate:
             cross_validate();
 
+        if to_dyfav_build_tress:
+            dyFAV_tree()
+
 # END_Control_Flow
+
+
+# todo dyfav_randomized notes
+
+# make a variety of models, start with 3 randomized number of features from feature columns and randomized number of examples (with at least one of each class)
+# get model directory and run, recognize on all of them (model_directories will be randomized as well)
+# take majority vote of all three
+# if this increases accuracy -> go with this else no go.
